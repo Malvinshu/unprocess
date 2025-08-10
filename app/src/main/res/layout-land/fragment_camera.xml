@@ -41,5 +41,16 @@
         android:layout_marginEnd="26dp"
         android:scaleType="fitCenter" />
 
+    <!--Manual focus slider-->
+<!--    <SeekBar-->
+<!--        android:id="@+id/focus_slider"-->
+<!--        android:layout_width="200dp"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_gravity="bottom|center_horizontal"-->
+<!--        android:layout_marginBottom="20dp"-->
+<!--        android:max="100"-->
+<!--        android:progress="0"-->
+<!--        android:visibility="gone" />-->
+
 
 </FrameLayout>

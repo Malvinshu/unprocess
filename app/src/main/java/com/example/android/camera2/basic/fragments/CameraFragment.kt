@@ -471,7 +471,7 @@ class CameraFragment : Fragment() {
                             ) ?: throw IOException("Failed to create MediaStore entry")
 
                             resolver.openOutputStream(uri)?.use { stream ->
-                                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
+                                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, stream)
                             }
 
                             // Add EXIF orientation data using the URI
@@ -499,7 +499,7 @@ class CameraFragment : Fragment() {
                             val file = File(appFolder, filename)
 
                             FileOutputStream(file).use { stream ->
-                                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
+                                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, stream)
                             }
 
                             // Add EXIF orientation data
