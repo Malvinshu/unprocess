@@ -47,3 +47,15 @@ This is my first foray into Android app development, so the project may start a 
 around the edges. If there is community interest, I will do my best to keep it going and
 take in any improvements that are able to be contributed. I can be contacted at my email
 (reilandeubank@proton.me) or various social medias with the username @reilandeubank.
+
+Changes made
+------------
+
+- Force landscape mode
+- Image preview now matches what the camera sees
+
+Additional Notes
+----------------
+Please note that despite this fork is made public, the development is pretty much of an effort to make this app works and looks better for my current phone (Poco F4 GT)
+Although i don't discourage anyone from pulling this fork, i genuinely don't think this repository is one-size-fits-all solution. Thank you
+Sincerely. Malvinshu
