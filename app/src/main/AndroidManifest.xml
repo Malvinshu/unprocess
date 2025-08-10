@@ -39,6 +39,7 @@
 
         <activity
             android:name="com.reilandeubank.unprocess.CameraActivity"
+            android:screenOrientation="landscape"
             android:clearTaskOnLaunch="true"
             android:exported="true"
             android:theme="@style/AppTheme">

@@ -35,8 +35,11 @@
         android:layout_width="96dp"
         android:layout_height="96dp"
         android:layout_gravity="center|right"
-        android:scaleType="fitCenter"
         android:background="@drawable/ic_shutter"
-        android:contentDescription="@string/capture" />
+        android:contentDescription="@string/capture"
+        android:rotation="0"
+        android:layout_marginEnd="26dp"
+        android:scaleType="fitCenter" />
+
 
 </FrameLayout>

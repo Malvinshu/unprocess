@@ -50,28 +50,50 @@ class AutoFitSurfaceView @JvmOverloads constructor(
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
-        val width = MeasureSpec.getSize(widthMeasureSpec)
-        val height = MeasureSpec.getSize(heightMeasureSpec)
-        if (aspectRatio == 0f) {
-            setMeasuredDimension(width, height)
-        } else {
+        val viewWidth = MeasureSpec.getSize(widthMeasureSpec)
+        val viewHeight = MeasureSpec.getSize(heightMeasureSpec)
 
-            // Performs center-crop transformation of the camera frames
-            val newWidth: Int
-            val newHeight: Int
-            val actualRatio = if (width > height) aspectRatio else 1f / aspectRatio
-            if (width < height * actualRatio) {
-                newHeight = height
-                newWidth = (height * actualRatio).roundToInt()
+        if (aspectRatio == 0f) {
+            setMeasuredDimension(viewWidth, viewHeight)
+        } else {
+            var newWidth: Int
+            var newHeight: Int
+
+            // Determine the orientation of the view relative to the aspect ratio
+            // This assumes aspectRatio is always width/height of the camera sensor
+            val isViewLandscape = viewWidth > viewHeight
+            val isPreviewLandscape = aspectRatio > 1f
+
+            if (isViewLandscape == isPreviewLandscape) {
+                // Orientations match, scale to fit
+                if (viewWidth / viewHeight.toFloat() > aspectRatio) {
+                    // View is wider than preview, fit by height
+                    newHeight = viewHeight
+                    newWidth = (viewHeight * aspectRatio).roundToInt()
+                } else {
+                    // View is taller than preview (or same aspect ratio), fit by width
+                    newWidth = viewWidth
+                    newHeight = (viewWidth / aspectRatio).roundToInt()
+                }
             } else {
-                newWidth = width
-                newHeight = (width / actualRatio).roundToInt()
+                // Orientations mismatch (e.g., landscape view, portrait preview)
+                // We need to use the inverse of the aspectRatio for calculation
+                if (viewWidth / viewHeight.toFloat() > (1f / aspectRatio)) {
+                    // View is wider than (inverted) preview, fit by height
+                    newHeight = viewHeight
+                    newWidth = (viewHeight * (1f/aspectRatio)).roundToInt()
+                } else {
+                    // View is taller than (inverted) preview, fit by width
+                    newWidth = viewWidth
+                    newHeight = (viewWidth / (1f/aspectRatio)).roundToInt()
+                }
             }
 
-            Log.d(TAG, "Measured dimensions set: $newWidth x $newHeight")
+            Log.d(TAG, "Measured dimensions set: $newWidth x $newHeight for view size $viewWidth x $viewHeight")
             setMeasuredDimension(newWidth, newHeight)
         }
     }
+
 
     companion object {
         private val TAG = AutoFitSurfaceView::class.java.simpleName
