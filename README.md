@@ -53,9 +53,15 @@ Changes made
 
 - Force landscape mode
 - Image preview now matches what the camera sees
+- Manual focus with 2 synchronized sliders. Any change on either one will also reported on the other side
+- Manual ISO and shutter speed (UNSTABLE!)
+- JPEG compression change
+*Basically i have not made any huge change from the vanilla app. But caused a LOT of instabilities lmao
 
 Additional Notes
 ----------------
 Please note that despite this fork is made public, the development is pretty much of an effort to make this app works and looks better for my current phone (Poco F4 GT)
-Although i don't discourage anyone from pulling this fork, i genuinely don't think this repository is one-size-fits-all solution. Thank you
+Although i don't discourage anyone from pulling this fork, i genuinely don't think this repository is one-size-fits-all solution.
+If you prefer stability over niche features, please check upstream.
+Thank you
 Sincerely. Malvinshu
