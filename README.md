@@ -48,7 +48,17 @@ around the edges. If there is community interest, I will do my best to keep it g
 take in any improvements that are able to be contributed. I can be contacted at my email
 (reilandeubank@proton.me) or various social medias with the username @reilandeubank.
 
-Changes made
+Notes from Malvinshu
+-------------
+Notes from Malvinshu will be shown here. All the notes above are from the original creator (reilandeubank).
+
+I highly recommend to check them out. As their projects are very insteresting to study and utilize.
+
+Please note that despite this fork is made public, the development is pretty much of an effort to make this app works and looks better for my current phone (Poco F4 GT)
+
+Although i don't discourage anyone from pulling this fork, i genuinely don't think this repository is one-size-fits-all solution.
+
+ Changes made
 ------------
 
 - Force landscape mode
@@ -60,9 +70,6 @@ Changes made
 
 Additional Notes
 ----------------
-Please note that despite this fork is made public, the development is pretty much of an effort to make this app works and looks better for my current phone (Poco F4 GT)
-
-Although i don't discourage anyone from pulling this fork, i genuinely don't think this repository is one-size-fits-all solution.
 
 If you prefer stability over niche features, please check upstream.
 
