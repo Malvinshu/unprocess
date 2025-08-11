@@ -30,16 +30,7 @@
         android:layout_height="match_parent"
         android:foreground="@android:color/transparent" />
 
-    <ImageButton
-        android:id="@+id/capture_button"
-        android:layout_width="96dp"
-        android:layout_height="96dp"
-        android:layout_gravity="center|right"
-        android:background="@drawable/ic_shutter"
-        android:contentDescription="@string/capture"
-        android:rotation="0"
-        android:layout_marginEnd="26dp"
-        android:scaleType="fitCenter" />
+
 
     <!--Manual focus slider (Vertical - Left)-->
     <SeekBar
@@ -75,5 +66,56 @@
         android:background="#80000000"
         android:padding="8dp"/>
 
+    <LinearLayout
+        android:id="@+id/controls_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center|right"
+        android:layout_marginEnd="26dp"
+        android:orientation="vertical"
+        android:visibility="visible"
+        >
+
+        <TextView
+        android:id="@+id/iso_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="ISO"
+        android:textColor="@android:color/black"
+        android:layout_gravity="center"/>
+
+        <NumberPicker
+            android:id="@+id/iso_picker"
+            android:layout_width="wrap_content"
+            android:layout_height="120dp"
+            android:theme="@style/Theme.AppCompat.DayNight"
+            android:layout_gravity="center"
+            />
+        <!--buffer for shutter button. Divide the set the vertical distance between NumberPicker-->
+        <ImageButton
+            android:id="@+id/capture_button"
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:layout_gravity="center"
+            android:background="@drawable/ic_shutter"
+            android:contentDescription="@string/capture"
+            android:rotation="0"
+            android:scaleType="fitCenter" />
+
+        <NumberPicker
+            android:id="@+id/shutter_speed_picker"
+            android:layout_width="wrap_content"
+            android:layout_height="120dp"
+            android:theme="@style/Theme.AppCompat.DayNight"
+            android:layout_gravity="center"/>
+
+        <TextView
+            android:id="@+id/shutter_speed_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="Speed"
+            android:textColor="@android:color/black"/>
+    </LinearLayout>
 
 </FrameLayout>
