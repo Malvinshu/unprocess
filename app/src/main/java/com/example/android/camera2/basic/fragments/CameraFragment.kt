@@ -17,13 +17,17 @@
 package com.reilandeubank.unprocess.fragments
 
 import android.annotation.SuppressLint
+import android.content.ContentValues
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.ImageFormat
 import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
+import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.DngCreator
@@ -32,14 +36,17 @@ import android.media.Image
 import android.media.ImageReader
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.os.Handler
 import android.os.HandlerThread
+import android.provider.MediaStore
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.View
 import android.view.ViewGroup
+import android.widget.SeekBar
 import androidx.core.graphics.drawable.toDrawable
 import androidx.exifinterface.media.ExifInterface
 import androidx.fragment.app.Fragment
@@ -48,12 +55,12 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.Navigation
 import androidx.navigation.fragment.navArgs
-import com.reilandeubank.unprocess.utils.computeExifOrientation
-import com.reilandeubank.unprocess.utils.getPreviewOutputSize
-import com.reilandeubank.unprocess.utils.OrientationLiveData
 import com.reilandeubank.unprocess.CameraActivity
 import com.reilandeubank.unprocess.R
 import com.reilandeubank.unprocess.databinding.FragmentCameraBinding
+import com.reilandeubank.unprocess.utils.OrientationLiveData
+import com.reilandeubank.unprocess.utils.computeExifOrientation
+import com.reilandeubank.unprocess.utils.getPreviewOutputSize
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -62,23 +69,13 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.text.SimpleDateFormat
-import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.TimeoutException
 import java.util.Date
 import java.util.Locale
-import kotlin.RuntimeException
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.TimeoutException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
-import android.Manifest
-import android.content.ContentValues
-import android.content.pm.PackageManager
-import android.os.Environment
-import android.provider.MediaStore
-import androidx.core.content.ContextCompat
-import java.io.OutputStream
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 
 class CameraFragment : Fragment() {
 
@@ -142,6 +139,13 @@ class CameraFragment : Fragment() {
 
     /** Live data listener for changes in the device orientation relative to the camera */
     private lateinit var relativeOrientation: OrientationLiveData
+
+    // Add these properties for manual focus
+    private var isManualFocusEnabled = false
+    private var minFocusDistance = 0f
+    private var maxFocusDistance = 0f
+    private var currentFocusDistance = 0f
+
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -231,11 +235,18 @@ class CameraFragment : Fragment() {
 
         val captureRequest = camera.createCaptureRequest(
             CameraDevice.TEMPLATE_PREVIEW
-        ).apply { addTarget(fragmentCameraBinding.viewFinder.holder.surface) }
+        ).apply {
+            addTarget(fragmentCameraBinding.viewFinder.holder.surface)
+            // Start with auto focus
+            set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+            set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO)
+        }
 
         // This will keep sending the capture request as frequently as possible until the
         // session is torn down or session.stopRepeating() is called
         session.setRepeatingRequest(captureRequest.build(), null, cameraHandler)
+
+        setupManualFocus()
 
         // Listen to the capture button
         fragmentCameraBinding.captureButton.setOnClickListener {
@@ -303,6 +314,179 @@ class CameraFragment : Fragment() {
         }, handler)
     }
 
+    private fun setupManualFocus() {
+        val focusDistances = characteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)
+        val focusModes = characteristics.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES)
+
+        val supportsManualFocus = focusDistances != null && focusDistances > 0 &&
+                focusModes?.contains(CameraMetadata.CONTROL_AF_MODE_OFF) == true
+
+        Log.d(TAG, "Manual focus support: $supportsManualFocus, max distance: $focusDistances")
+
+        if (supportsManualFocus) {
+            minFocusDistance = 0f
+            maxFocusDistance = focusDistances!!
+            currentFocusDistance = minFocusDistance
+
+            // Set up both seekbars
+            setSeekBarsVisibility(View.VISIBLE)
+
+            fragmentCameraBinding.focusSlider?.let { seekBar ->
+                seekBar.max = 100
+                seekBar.progress = 0
+                setupSeekBarListener(seekBar)
+            }
+
+            fragmentCameraBinding.focusSliderDuplicate?.let { seekBar ->
+                seekBar.max = 100
+                seekBar.progress = 0
+                setupSeekBarListener(seekBar)
+            }
+
+            fragmentCameraBinding.captureButton.setOnLongClickListener {
+                toggleManualFocus()
+                true
+            }
+        } else {
+            setSeekBarsVisibility(View.GONE)
+            Log.w(TAG, "Manual focus not supported on this camera")
+        }
+    }
+
+    private fun toggleManualFocus() {
+        isManualFocusEnabled = !isManualFocusEnabled
+
+        if (isManualFocusEnabled) {
+            setSeekBarsVisibility(View.VISIBLE)
+            fragmentCameraBinding.focusIndicator?.text = "MF Mode"
+            val progress = fragmentCameraBinding.focusSlider?.progress ?: 0
+            updateManualFocus(progress)
+            Log.d(TAG, "Manual focus enabled")
+        } else {
+            setSeekBarsVisibility(View.GONE)
+            fragmentCameraBinding.focusIndicator?.text = "AF Mode"
+            setAutoFocus()
+            Log.d(TAG, "Auto focus enabled")
+        }
+
+    }
+
+    private fun updateManualFocus(progress: Int) {
+        if (!::session.isInitialized) return
+
+        try {
+            // Calculate focus distance - be more careful with the range
+            currentFocusDistance = minFocusDistance + (progress / 100f) * (maxFocusDistance - minFocusDistance)
+
+            // Clamp the focus distance to valid range
+            currentFocusDistance = currentFocusDistance.coerceIn(minFocusDistance, maxFocusDistance)
+
+            val captureRequestBuilder = camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply {
+                addTarget(fragmentCameraBinding.viewFinder.holder.surface)
+
+                // IMPORTANT: Use CONTROL_MODE_AUTO instead of OFF for better compatibility
+                set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO)
+
+                // Only set AF mode to OFF and focus distance when manual focus is enabled
+                if (isManualFocusEnabled) {
+                    set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_OFF)
+                    set(CaptureRequest.LENS_FOCUS_DISTANCE, currentFocusDistance)
+
+                    // Optional: Set these for more stable manual control
+                    set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON)
+                    set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_AUTO)
+                } else {
+                    set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+                }
+            }
+
+            session.setRepeatingRequest(captureRequestBuilder.build(), null, cameraHandler)
+            Log.d(TAG, "Manual focus set to distance: $currentFocusDistance (progress: $progress)")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting manual focus", e)
+            // If manual focus fails, fall back to auto focus
+            setAutoFocus()
+            isManualFocusEnabled = false
+        }
+    }
+
+    private fun setAutoFocus() {
+        if (!::session.isInitialized) return
+
+        try {
+            val captureRequestBuilder = camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply {
+                addTarget(fragmentCameraBinding.viewFinder.holder.surface)
+
+                // Use standard auto settings
+                set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO)
+                set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+                set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON)
+                set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_AUTO)
+            }
+
+            session.setRepeatingRequest(captureRequestBuilder.build(), null, cameraHandler)
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting auto focus", e)
+        }
+    }
+
+
+    /** Seekbar synchronization logic. Check here if:
+     * The Seekbar synchronization fails,
+     * TBD
+    */
+
+    private fun syncSeekBars(sourceSeekBar: SeekBar, targetSeekBar: SeekBar, progress: Int) {
+        // Temporarily remove listener to prevent infinite loop
+        targetSeekBar.setOnSeekBarChangeListener(null)
+        targetSeekBar.progress = progress
+        // Restore the listener
+        setupSeekBarListener(targetSeekBar)
+    }
+    // Helper function to set up seekbar listener
+    private fun setupSeekBarListener(seekBar: SeekBar) {
+        seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (fromUser && ::session.isInitialized && isManualFocusEnabled) {
+                    updateManualFocus(progress)
+
+                    // Sync the other seekbar
+                    when (seekBar?.id) {
+                        R.id.focus_slider -> {
+                            fragmentCameraBinding.focusSliderDuplicate?.let {
+                                syncSeekBars(seekBar, it, progress)
+                            }
+                        }
+                        R.id.focus_slider_duplicate -> {
+                            fragmentCameraBinding.focusSlider?.let {
+                                syncSeekBars(seekBar, it, progress)
+                            }
+                        }
+                    }
+                }
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {
+                // Don't automatically enable manual focus on touch - wait for toggle
+            }
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+    }
+    // Helper function to set visibility for both seekbars
+    private fun setSeekBarsVisibility(visibility: Int) {
+        fragmentCameraBinding.focusSlider?.visibility = visibility
+        fragmentCameraBinding.focusSliderDuplicate?.visibility = visibility
+    }
+
+    // Helper function to set progress for both seekbars
+    private fun setSeekBarsProgress(progress: Int) {
+        fragmentCameraBinding.focusSlider?.progress = progress
+        fragmentCameraBinding.focusSliderDuplicate?.progress = progress
+    }
+
     /**
      * Starts a [CameraCaptureSession] and returns the configured session (as the result of the
      * suspend coroutine
@@ -350,7 +534,29 @@ class CameraFragment : Fragment() {
 
         val captureRequest = session.device.createCaptureRequest(
             CameraDevice.TEMPLATE_STILL_CAPTURE
-        ).apply { addTarget(imageReader.surface) }
+        ).apply {
+            addTarget(imageReader.surface)
+
+            // Use the same strategy as preview: keep CONTROL_MODE_AUTO
+            set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO)
+
+            if (isManualFocusEnabled) {
+                set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_OFF)
+                set(CaptureRequest.LENS_FOCUS_DISTANCE, currentFocusDistance)
+                // Keep AE and AWB on auto for proper exposure
+                set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON)
+                set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_AUTO)
+
+                Log.d(TAG, "Capture with manual focus distance: $currentFocusDistance")
+            } else {
+                set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+                set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON)
+                set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_AUTO)
+
+                Log.d(TAG, "Capture with auto focus")
+            }
+        }
+
         session.capture(captureRequest.build(), object : CameraCaptureSession.CaptureCallback() {
 
             override fun onCaptureStarted(
@@ -372,56 +578,44 @@ class CameraFragment : Fragment() {
                 val resultTimestamp = result.get(CaptureResult.SENSOR_TIMESTAMP)
                 Log.d(TAG, "Capture result received: $resultTimestamp")
 
-                // Set a timeout in case image captured is dropped from the pipeline
                 val exc = TimeoutException("Image dequeuing took too long")
                 val timeoutRunnable = Runnable { cont.resumeWithException(exc) }
                 imageReaderHandler.postDelayed(timeoutRunnable, IMAGE_CAPTURE_TIMEOUT_MILLIS)
 
-                // Loop in the coroutine's context until an image with matching timestamp comes
-                // We need to launch the coroutine context again because the callback is done in
-                //  the handler provided to the `capture` method, not in our coroutine context
                 @Suppress("BlockingMethodInNonBlockingContext")
                 lifecycleScope.launch(cont.context) {
                     while (true) {
-
-                        // Dequeue images while timestamps don't match
                         val image = imageQueue.take()
-                        // TODO(owahltinez): b/142011420
-                        // if (image.timestamp != resultTimestamp) continue
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
                             image.format != ImageFormat.DEPTH_JPEG &&
                             image.timestamp != resultTimestamp
                         ) continue
                         Log.d(TAG, "Matching image dequeued: ${image.timestamp}")
 
-                        // Unset the image reader listener
                         imageReaderHandler.removeCallbacks(timeoutRunnable)
                         imageReader.setOnImageAvailableListener(null, null)
 
-                        // Clear the queue of images, if there are left
                         while (imageQueue.size > 0) {
                             imageQueue.take().close()
                         }
 
-                        // Compute EXIF orientation metadata
                         val rotation = relativeOrientation.value ?: 0
                         val mirrored = characteristics.get(CameraCharacteristics.LENS_FACING) ==
                                 CameraCharacteristics.LENS_FACING_FRONT
                         val exifOrientation = computeExifOrientation(rotation, mirrored)
 
-                        // Build the result and resume progress
                         cont.resume(
                             CombinedCaptureResult(
                                 image, result, exifOrientation, imageReader.imageFormat
                             )
                         )
-
-                        // There is no need to break out of the loop, this coroutine will suspend
+                        break
                     }
                 }
             }
         }, cameraHandler)
     }
+
 
     /** Helper function used to save a [CombinedCaptureResult] into a [File] */
     private suspend fun saveResult(result: CombinedCaptureResult): File = suspendCoroutine { cont ->

@@ -41,16 +41,39 @@
         android:layout_marginEnd="26dp"
         android:scaleType="fitCenter" />
 
-    <!--Manual focus slider-->
-<!--    <SeekBar-->
-<!--        android:id="@+id/focus_slider"-->
-<!--        android:layout_width="200dp"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:layout_gravity="bottom|center_horizontal"-->
-<!--        android:layout_marginBottom="20dp"-->
-<!--        android:max="100"-->
-<!--        android:progress="0"-->
-<!--        android:visibility="gone" />-->
+    <!--Manual focus slider (Vertical - Left)-->
+    <SeekBar
+        android:id="@+id/focus_slider"
+        android:layout_width="300dp"
+        android:layout_height="wrap_content"
+        android:rotation="270"
+        android:layout_gravity="center|left"
+        android:layout_marginStart="-120dp"
+        android:max="100"
+        android:progress="0" />
+
+    <!--Duplicate Manual focus slider (Vertical - Right)-->
+    <SeekBar
+        android:id="@+id/focus_slider_duplicate"
+        android:layout_width="300dp"
+        android:layout_height="wrap_content"
+        android:rotation="270"
+        android:layout_gravity="center|right"
+        android:layout_marginStart="-120dp"
+        android:max="100"
+        android:progress="0" />
+
+    <!-- Focus Indicator Texts -->
+    <TextView
+        android:id="@+id/focus_indicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="40dp"
+        android:text="AF Mode"
+        android:textColor="#FFFFFF"
+        android:background="#80000000"
+        android:padding="8dp"/>
 
 
 </FrameLayout>
