@@ -29,7 +29,13 @@ Pre-requisites
 Screenshots
 -------------
 
-None at the moment
+Display UI:
+
+![Front end user interface and user experience of the app. There exists 2 sliders on the left and the right of the preview, a shutter button, and 2 number selectors; each for ISO and shutter speed (from top to bottom, respectively)](<Front-End.jpg>)
+
+Image taken using Poco F4GT (Sony IMX686) with 90% image compression
+
+![The result of the image taken using Camera 2 API. Although the image looks blurry and washed, it's assured that there are no post-processing except for image compression](<Result.jpg>)
 
 Getting Started
 ---------------
