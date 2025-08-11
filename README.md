@@ -61,7 +61,11 @@ Changes made
 Additional Notes
 ----------------
 Please note that despite this fork is made public, the development is pretty much of an effort to make this app works and looks better for my current phone (Poco F4 GT)
+
 Although i don't discourage anyone from pulling this fork, i genuinely don't think this repository is one-size-fits-all solution.
+
 If you prefer stability over niche features, please check upstream.
-Thank you
-Sincerely. Malvinshu
+
+Thank you.
+
+Sincerely, Malvinshu
